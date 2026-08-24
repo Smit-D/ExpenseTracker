@@ -8,6 +8,7 @@ import {
   OnDestroy,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { SupabaseService } from '../services/supabase.service';
 import { Chart, registerables } from 'chart.js';
 import { Subscription } from 'rxjs';
@@ -16,11 +17,23 @@ Chart.register(...registerables);
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   template: `
     <div class="page-container">
       <div class="welcome-header">
-        <h2>Welcome back! 👋</h2>
+        <div class="title-row">
+          <h2>Welcome back, {{ userName }}! 👋</h2>
+          <button class="btn-edit-name" (click)="toggleEditName()">
+            {{ isEditingName ? 'Save' : 'Edit Name' }}
+          </button>
+        </div>
+
+        <!-- Editable Name Input (Toggled) -->
+        <div class="name-edit-box" *ngIf="isEditingName">
+          <input type="text" [(ngModel)]="tempUserName" placeholder="Enter your name..." />
+          <button class="btn btn-primary" (click)="saveUserName()">Done</button>
+        </div>
+
         <p>Here is your financial snapshot for this month.</p>
       </div>
 
@@ -91,6 +104,12 @@ Chart.register(...registerables);
         margin-bottom: 2rem;
         margin-top: 0;
       }
+      .title-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+      }
       .welcome-header h2 {
         margin: 0;
         font-size: 1.8rem;
@@ -102,6 +121,33 @@ Chart.register(...registerables);
         margin: 0.5rem 0 0 0;
         color: #64748b;
         font-size: 1rem;
+      }
+
+      .btn-edit-name {
+        background: none;
+        border: none;
+        color: #4f46e5;
+        font-size: 0.85rem;
+        font-weight: 600;
+        cursor: pointer;
+        padding: 0.2rem 0.5rem;
+      }
+      .btn-edit-name:hover {
+        text-decoration: underline;
+      }
+
+      .name-edit-box {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 0.75rem;
+        max-width: 300px;
+      }
+      .name-edit-box input {
+        flex-grow: 1;
+        padding: 0.4rem 0.6rem;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        font-size: 0.9rem;
       }
 
       .dashboard-grid {
@@ -126,7 +172,6 @@ Chart.register(...registerables);
         font-weight: 700;
       }
 
-      /* Wrapper handles relative positioning for absolute center text */
       .canvas-wrapper {
         position: relative;
         height: 300px;
@@ -138,7 +183,7 @@ Chart.register(...registerables);
 
       .chart-center-text {
         position: absolute;
-        top: 30%;
+        top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
         display: flex;
@@ -236,7 +281,7 @@ Chart.register(...registerables);
           padding: 1.5rem 1rem;
         }
         .welcome-header h2 {
-          font-size: 1.4rem;
+          font-size: 1.3rem;
         }
         .welcome-header p {
           font-size: 0.9rem;
@@ -259,8 +304,13 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
   categoryBreakdown: any[] = [];
   chart: Chart | null = null;
   totalSpent: number = 0;
-  private sub!: Subscription;
 
+  // User name properties
+  userName: string = 'User';
+  tempUserName: string = '';
+  isEditingName: boolean = false;
+
+  private sub!: Subscription;
   colors = ['#6366f1', '#ec4899', '#14b8a6', '#f59e0b', '#8b5cf6', '#ef4444'];
 
   constructor(
@@ -269,6 +319,7 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
   ) {}
 
   async ngOnInit() {
+    this.loadUserName();
     await this.loadData();
     this.sub = this.supabaseService.refresh$.subscribe(() => {
       this.loadData();
@@ -283,21 +334,46 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
     if (this.categoryBreakdown.length > 0) this.renderChart();
   }
 
+  loadUserName() {
+    const savedName = localStorage.getItem('app_user_name');
+    if (savedName) {
+      this.userName = savedName;
+    }
+  }
+
+  toggleEditName() {
+    if (!this.isEditingName) {
+      this.tempUserName = this.userName;
+      this.isEditingName = true;
+    } else {
+      this.saveUserName();
+    }
+  }
+
+  saveUserName() {
+    if (this.tempUserName && this.tempUserName.trim() !== '') {
+      this.userName = this.tempUserName.trim();
+      localStorage.setItem('app_user_name', this.userName);
+    }
+    this.isEditingName = false;
+    this.cdr.detectChanges();
+  }
+
   async loadData() {
     const categories = await this.supabaseService.getCategories();
     const expenses = await this.supabaseService.getExpenses();
 
     const now = new Date();
-    const currentMonthExpenses = expenses.filter((e: { expense_date: string | number | Date }) => {
+    const currentMonthExpenses = expenses.filter((e) => {
       const d = new Date(e.expense_date);
       return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
     });
 
     this.categoryBreakdown = categories
-      .map((cat: any, index: number) => {
+      .map((cat, index) => {
         const spent = currentMonthExpenses
-          .filter((e: { category_id: any }) => e.category_id === cat.id)
-          .reduce((sum: number, e: { amount: any }) => sum + Number(e.amount), 0);
+          .filter((e) => e.category_id === cat.id)
+          .reduce((sum, e) => sum + Number(e.amount), 0);
 
         return {
           name: cat.name,
@@ -306,7 +382,7 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
           color: this.colors[index % this.colors.length],
         };
       })
-      .sort((a: { spent: number }, b: { spent: number }) => b.spent - a.spent);
+      .sort((a, b) => b.spent - a.spent);
 
     this.totalSpent = this.categoryBreakdown.reduce((sum, item) => sum + item.spent, 0);
 
