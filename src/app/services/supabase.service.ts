@@ -7,27 +7,55 @@ import { Subject } from 'rxjs';
 @Injectable({ providedIn: 'root' })
 export class SupabaseService {
   private supabase: SupabaseClient;
+  private workspaceId: string;
 
   private refreshTrigger = new Subject<void>();
   refresh$ = this.refreshTrigger.asObservable();
 
   constructor() {
     this.supabase = createClient(environment.supabaseUrl, environment.supabaseKey);
+    this.workspaceId = this.getOrCreateWorkspaceId();
+  }
+
+  // Generate or retrieve a persistent isolated workspace for this browser session
+  private getOrCreateWorkspaceId(): string {
+    let id = localStorage.getItem('app_workspace_id');
+    if (!id) {
+      id = 'ws_' + Math.random().toString(36).substring(2, 11);
+      localStorage.setItem('app_workspace_id', id);
+    }
+    return id;
+  }
+
+  // Allow users to switch or switch-in another workspace via a unique key sharing link if desired
+  public getWorkspaceId(): string {
+    return this.workspaceId;
+  }
+
+  public setWorkspaceId(id: string) {
+    localStorage.setItem('app_workspace_id', id);
+    this.workspaceId = id;
+    this.notifyDataChanged();
   }
 
   notifyDataChanged() {
     this.refreshTrigger.next();
   }
 
-  // --- Category APIs ---
+  // --- Category APIs (Workspace Isolated) ---
   async getCategories(): Promise<Category[]> {
-    const { data, error } = await this.supabase.from('categories').select('*').order('name');
+    const { data, error } = await this.supabase
+      .from('categories')
+      .select('*')
+      .eq('workspace_id', this.workspaceId)
+      .order('name');
     if (error) throw error;
     return data || [];
   }
 
   async addCategory(category: Partial<Category>) {
-    const { data, error } = await this.supabase.from('categories').insert(category).select();
+    const payload = { ...category, workspace_id: this.workspaceId };
+    const { data, error } = await this.supabase.from('categories').insert(payload).select();
     if (error) throw error;
     this.notifyDataChanged();
     return data;
@@ -38,6 +66,7 @@ export class SupabaseService {
       .from('categories')
       .update(category)
       .eq('id', id)
+      .eq('workspace_id', this.workspaceId)
       .select();
     if (error) throw error;
     this.notifyDataChanged();
@@ -45,17 +74,22 @@ export class SupabaseService {
   }
 
   async deleteCategory(id: string) {
-    const { data, error } = await this.supabase.from('categories').delete().eq('id', id);
+    const { data, error } = await this.supabase
+      .from('categories')
+      .delete()
+      .eq('id', id)
+      .eq('workspace_id', this.workspaceId);
     if (error) throw error;
     this.notifyDataChanged();
     return data;
   }
 
-  // --- Expense APIs ---
+  // --- Expense APIs (Workspace Isolated) ---
   async getExpenses(): Promise<Expense[]> {
     const { data, error } = await this.supabase
       .from('expenses')
       .select('*, categories(*)')
+      .eq('workspace_id', this.workspaceId)
       .order('expense_date', { ascending: false });
     if (error) throw error;
     return data || [];
@@ -69,14 +103,17 @@ export class SupabaseService {
     const { data, error } = await this.supabase
       .from('expenses')
       .select('amount')
+      .eq('workspace_id', this.workspaceId)
       .gte('expense_date', startDate)
       .lte('expense_date', today);
+
     if (error) throw error;
     return (data || []).reduce((sum, item) => sum + Number(item.amount), 0);
   }
 
   async addExpense(expense: Partial<Expense>) {
-    const { data, error } = await this.supabase.from('expenses').insert(expense).select();
+    const payload = { ...expense, workspace_id: this.workspaceId };
+    const { data, error } = await this.supabase.from('expenses').insert(payload).select();
     if (error) throw error;
     this.notifyDataChanged();
     return data;
@@ -87,6 +124,7 @@ export class SupabaseService {
       .from('expenses')
       .update(expense)
       .eq('id', id)
+      .eq('workspace_id', this.workspaceId)
       .select();
     if (error) throw error;
     this.notifyDataChanged();
@@ -94,13 +132,17 @@ export class SupabaseService {
   }
 
   async deleteExpense(id: string) {
-    const { data, error } = await this.supabase.from('expenses').delete().eq('id', id);
+    const { data, error } = await this.supabase
+      .from('expenses')
+      .delete()
+      .eq('id', id)
+      .eq('workspace_id', this.workspaceId);
     if (error) throw error;
     this.notifyDataChanged();
     return data;
   }
 
-  // --- RESTORED: Reports Query ---
+  // --- Reports Query (Workspace Isolated) ---
   async getFilteredExpenses(
     startDate: string,
     endDate: string,
@@ -109,6 +151,7 @@ export class SupabaseService {
     let query = this.supabase
       .from('expenses')
       .select('*, categories(*)')
+      .eq('workspace_id', this.workspaceId)
       .gte('expense_date', startDate)
       .lte('expense_date', endDate)
       .order('expense_date', { ascending: false });

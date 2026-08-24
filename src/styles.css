@@ -66,3 +66,32 @@ select:focus {
   background-color: #4338ca;
   transform: translateY(-1px);
 }
+
+.primary-button {
+  border: 1px solid #4f46e5;
+  border-radius: 5px;
+  color: white;
+  background-color: #4f46e5;
+  min-height: 30px;
+  cursor: pointer;
+}
+.primary-button:hover {
+  border: 1px solid #4f46e5;
+  border-radius: 5px;
+  color: #4f46e5;
+  background-color: white;
+}
+.secondary-button {
+  border: 1px solid #4f46e5;
+  border-radius: 5px;
+  color: #4f46e5;
+  background-color: transparent;
+  min-height: 30px;
+  cursor: pointer;
+}
+.secondary-button:hover {
+  border: 1px solid #4f46e5;
+  border-radius: 5px;
+  color: white;
+  background-color: #4f46e5;
+}

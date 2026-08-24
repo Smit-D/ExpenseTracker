@@ -1,6 +1,5 @@
-// src/environments/environment.ts
 export const environment = {
   production: true,
-  supabaseUrl: '',
-  supabaseKey: '',
+  supabaseUrl: 'https://yrfiwunloyhkdnhshahi.supabase.co',
+  supabaseKey: 'sb_publishable_x7Uqbh-eNL1XvXDw9eHYOw_HTEowmab',
 };

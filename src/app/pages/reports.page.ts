@@ -157,8 +157,16 @@ import { Subscription } from 'rxjs';
         width: 100%;
         padding: 0.75rem;
         font-size: 1rem;
+        background-color: #4f46e5;
+        color: white;
+        border: 1px solid #4f46e5;
+        border-radius: 5px;
+        cursor: pointer;
       }
-
+      .generate-btn:hover {
+        background-color: white;
+        color: #4f46e5;
+      }
       .summary-banner {
         display: flex;
         justify-content: space-between;
@@ -283,13 +291,16 @@ export class ReportsComponent implements OnInit, OnDestroy {
     }
   }
 
+  gridTotal() {
+    return this.filteredExpenses.reduce((sum, item) => sum + Number(item.amount), 0);
+  }
   async applyFilter() {
     this.filteredExpenses = await this.supabaseService.getFilteredExpenses(
       this.startDate,
       this.endDate,
       this.selectedCategories,
     );
-    this.filteredTotal = this.filteredExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
+    this.filteredTotal = this.gridTotal();
     this.cdr.detectChanges();
   }
 }
