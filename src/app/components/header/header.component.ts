@@ -69,8 +69,10 @@ import { Category, Expense } from '../../models/expense.model';
             />
           </div>
           <div class="modal-actions">
-            <button type="button" class="btn btn-outline" (click)="closeModal()">Cancel</button>
-            <button type="submit" class="btn btn-primary">Save</button>
+            <button type="button" class="btn btn-outline secondary-button" (click)="closeModal()">
+              Cancel
+            </button>
+            <button type="submit" class="btn btn-primary primary-button">Save</button>
           </div>
         </form>
       </div>
