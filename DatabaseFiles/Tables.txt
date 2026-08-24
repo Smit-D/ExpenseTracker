@@ -1,0 +1,51 @@
+-- 1. Create Categories Table
+CREATE TABLE IF NOT EXISTS categories (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL UNIQUE,
+    target_amount NUMERIC DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- 2. Create Expenses Table
+CREATE TABLE IF NOT EXISTS expenses (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    category_id UUID REFERENCES categories(id) ON DELETE CASCADE NOT NULL,
+    amount NUMERIC NOT NULL CHECK (amount > 0),
+    expense_date DATE NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_datetime TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- 3. Trigger for updated_datetime auto-update
+CREATE OR REPLACE FUNCTION update_updated_datetime_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_datetime = timezone('utc'::text, now());
+    RETURN NEW;
+END;
+$$ LANGUAGE 'plpgsql';
+
+CREATE TRIGGER trigger_update_expenses_timestamp
+BEFORE UPDATE ON expenses
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_datetime_column();
+
+-- 4. Enable Public Access (No Auth Required)
+ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE expenses ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow public all access on categories" 
+ON categories FOR ALL USING (true) WITH CHECK (true);
+
+CREATE POLICY "Allow public all access on expenses" 
+ON expenses FOR ALL USING (true) WITH CHECK (true);
+
+-- 5. Seed Default Categories
+INSERT INTO categories (name, target_amount) VALUES
+    ('Petrol', 3000),
+    ('Travel', 5000),
+    ('Food', 6000),
+    ('Leisure', 4000),
+    ('Other', 2000)
+ON CONFLICT (name) DO NOTHING;
