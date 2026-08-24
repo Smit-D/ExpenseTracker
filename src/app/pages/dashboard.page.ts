@@ -183,7 +183,7 @@ Chart.register(...registerables);
 
       .chart-center-text {
         position: absolute;
-        top: 50%;
+        top: 36%;
         left: 50%;
         transform: translate(-50%, -50%);
         display: flex;
