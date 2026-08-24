@@ -48,7 +48,7 @@ Chart.register(...registerables);
 
             <!-- Centered Overlay for Total -->
             <div class="chart-center-text" *ngIf="totalSpent > 0">
-              <span class="center-label">Total MTD</span>
+              <span class="center-label">Total</span>
               <span class="center-value">{{
                 totalSpent | currency: 'INR' : 'symbol' : '1.0-0'
               }}</span>
